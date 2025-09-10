@@ -1,99 +1,49 @@
 "use client";
 
 import Modal from "@/components/modal";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
-import {
-  BadgeCheckIcon,
-  ClipboardClock,
-  List,
-  ListCheck,
-  Plus,
-  Sigma,
-  SquarePen,
-  Trash,
-} from "lucide-react";
-import { useEffect, useState, useRef } from "react";
-import { Tasks } from "@/generated/prisma";
-import AlertModal from "@/components/alertModal";
+import { ListCheck, Plus, Sigma, Trash } from "lucide-react";
+import { useEffect } from "react";
+import TaskItem from "@/components/taskItem";
+import { useTasks } from "@/hooks/useTasks";
+import FilterTags from "@/components/filtersTags";
 
 const Home = () => {
-  const [taskList, setTaskList] = useState<Tasks[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [task, setTask] = useState<string>("");
-
-  const inputRef = useRef<HTMLInputElement>(null);
+  const {
+    taskList,
+    loading,
+    setTask,
+    editTaskValue,
+    setEditTaskValue,
+    selectedFilter,
+    setSelectedFilter,
+    inputRef,
+    fetchTasks,
+    handleCreateTask,
+    handleDeleteTask,
+    handleEditTask,
+  } = useTasks();
 
   useEffect(() => {
-    const fetchTasks = async () => {
-      try {
-        setLoading(true);
-        const response = await fetch("api/tasks");
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status} `);
-        }
-
-        const tasks: Tasks[] = await response.json();
-        setTaskList(tasks);
-      } catch (erro) {
-        console.error("Erro ao carregar tasks:", erro);
-      } finally {
-        setLoading(false);
-      }
-    };
     fetchTasks();
   }, []);
 
-  const handleCreateTask = async (
-    event: React.MouseEvent<HTMLButtonElement>
-  ) => {
-    event.preventDefault();
-    if (!task.trim()) return;
-
-    try {
-      const response = await fetch("api/tasks", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ task, done: false }),
-      });
-
-      if (!response.ok) {
-        throw new Error("Erro ao criar tarefa");
-      }
-
-      const newTask = await response.json();
-
-      setTaskList((prev) => [...prev, newTask]);
-      setTask("");
-      if (inputRef.current) {
-        inputRef.current.value = "";
-      }
-    } catch (error) {
-      console.error(error);
-    }
-  };
-
-  const handleDeleteTask = async (id: string) => {
-    try {
-      const response = await fetch("api/tasks", {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id }),
-      });
-      if (!response.ok) {
-        throw new Error("Erro ao deletar tarefa");
-      }
-      setTaskList((prev) => prev.filter((task) => task.id !== id));
-    } catch (error) {
-      console.error(error);
-    }
-  };
+  const filtersOption = [
+    { name: "Todas", tag: "all" },
+    { name: "Pendentes", tag: "pending" },
+    { name: "Completas", tag: "done" },
+  ];
 
   const totalTasks = taskList.length;
-  const tasksDone = 3;
+  const tasksDoneCount = taskList.filter((task) => task.done === true).length;
+  const filteredTasks = taskList.filter((task) => {
+    if (selectedFilter === "all") return task;
+    if (selectedFilter === "pending") return !task.done;
+    if (selectedFilter === "done") return task.done;
+  });
 
   return (
     <div className="flex flex-col w-full h-screen justify-center items-center bg-gray-100">
@@ -113,53 +63,34 @@ const Home = () => {
           <Separator className="mb-4" />
 
           <div className="flex gap-2">
-            <Badge variant="default" className="cursor-pointer">
-              <List />
-              Todas
-            </Badge>
-            <Badge variant="outline" className="cursor-pointer">
-              <ClipboardClock />
-              Não finalizadas
-            </Badge>
-            <Badge variant="outline" className="cursor-pointer">
-              <BadgeCheckIcon />
-              Concluídas
-            </Badge>
+            {filtersOption.map((f) => {
+              return (
+                <FilterTags
+                  key={f.tag}
+                  id={f.tag}
+                  name={f.name}
+                  selectedFilter={selectedFilter}
+                  setSelectedFilter={() => setSelectedFilter(f.tag)}
+                />
+              );
+            })}
           </div>
           <div className="mt-4">
             {loading === true ? (
               <div>Loading tasks...</div>
-            ) : loading === false && taskList.length === 0 ? (
+            ) : loading === false && filteredTasks.length === 0 ? (
               <p>No tasks found</p>
             ) : (
-              taskList.map((task) => {
+              filteredTasks.map((task) => {
                 return (
-                  <div
+                  <TaskItem
                     key={task.id}
-                    className="flex h-14 gap-2 items-center justify-between border-t-1 last:border-b-1"
-                  >
-                    <div className="w-1 h-full bg-green-300" />
-                    <p className="flex-1 px-2 text-sm">{task.task}</p>
-
-                    <div className="flex items-center gap-2">
-                      <Modal
-                        title="Editar Tarefa"
-                        trigger={
-                          <SquarePen size={20} className="cursor-pointer" />
-                        }
-                      >
-                        <div className="flex gap-2 text-center">
-                          <Input placeholder="Editar tarefa" />
-                          <Button className="cursor-pointer">Editar</Button>
-                        </div>
-                      </Modal>
-                      <AlertModal
-                        title={`Deseja realmente excluir a tarefa ${task.task}?`}
-                        trigger={<Trash size={20} className="cursor-pointer" />}
-                        onclick={() => handleDeleteTask(task.id)}
-                      ></AlertModal>
-                    </div>
-                  </div>
+                    task={task}
+                    editTaskValue={editTaskValue}
+                    setEditTaskValue={setEditTaskValue}
+                    handleEditTask={handleEditTask}
+                    handleDeleteTask={handleDeleteTask}
+                  />
                 );
               })
             )}
@@ -169,7 +100,7 @@ const Home = () => {
             <div className="flex gap-2 items-center">
               <ListCheck size={18} />
               <p className="text-xs">
-                Tarefas Concluídas ({tasksDone}/{totalTasks})
+                Tarefas Concluídas ({tasksDoneCount}/{totalTasks})
               </p>
             </div>
             <Modal

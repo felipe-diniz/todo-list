@@ -1,6 +1,7 @@
 import {
   CreateTaskSchema,
   DeleteTaskSchema,
+  EditTaskSchema,
   TasksArraySchema,
   TaskSchema,
 } from "@/types/schemas";
@@ -59,13 +60,58 @@ export async function POST(request: Request) {
       headers: { "Content-Type": "application/json" },
     });
   } catch (error) {
-    console.log(error);
+    if (error instanceof z.ZodError) {
+      const firstMessage = error.issues[0]?.message ?? "Erro de validação";
+      return new Response(JSON.stringify({ error: firstMessage }), {
+        status: 400,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+    return (
+      new Response(JSON.stringify({ erro: "Erro ao criar tarefa" })),
+      {
+        status: 500,
+        headers: { "Content-Type": "application/json" },
+      }
+    );
   }
 }
 
 export async function PUT(request: Request) {
   try {
-  } catch (error) {}
+    const body = await request.json();
+    const validadeData = EditTaskSchema.parse(body);
+
+    const updateTask = await prisma.tasks.update({
+      where: { id: validadeData.id },
+      data: {
+        task: validadeData.task,
+        done: validadeData.done,
+      },
+    });
+
+    const validatedTask = EditTaskSchema.parse(updateTask);
+
+    return new Response(JSON.stringify(validatedTask), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    });
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      const firstMessage = error.issues[0]?.message ?? "Erro de validação";
+      return new Response(JSON.stringify({ error: firstMessage }), {
+        status: 400,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+    return (
+      new Response(JSON.stringify({ error: "Erro ao editar tarefa" })),
+      {
+        status: 500,
+        headers: { "Content-Type": "application/json" },
+      }
+    );
+  }
 }
 
 export async function DELETE(request: Request) {
