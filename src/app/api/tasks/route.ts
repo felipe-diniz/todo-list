@@ -8,9 +8,11 @@ import {
 import { prisma } from "@/utils/prisma";
 import z from "zod";
 
-export async function GET(request: Request) {
+export async function GET(_request: Request) {
   try {
-    const tasks = await prisma.tasks.findMany();
+    const tasks = await prisma.tasks.findMany({
+      orderBy: { done: "asc" },
+    });
 
     const validatedTasks = TasksArraySchema.parse(tasks);
     return new Response(JSON.stringify(validatedTasks), {
@@ -119,14 +121,16 @@ export async function DELETE(request: Request) {
     const body = await request.json();
     const { id } = DeleteTaskSchema.parse(body);
 
-    await prisma.tasks.delete({
-      where: { id },
+    const ids = Array.isArray(id) ? id : [id];
+
+    await prisma.tasks.deleteMany({
+      where: { id: { in: ids } },
     });
 
     return new Response(
       JSON.stringify({
-        message: "Tarefa deletada com sucesso",
-        id,
+        message: "Tarefas deletadas com sucesso",
+        id: ids,
       }),
       {
         status: 200,

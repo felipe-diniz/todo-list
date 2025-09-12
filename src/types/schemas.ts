@@ -17,7 +17,7 @@ export const CreateTaskSchema = z
   .strict();
 
 export const DeleteTaskSchema = z.object({
-  id: z.string(),
+  id: z.union([z.string(), z.array(z.string())]),
 });
 
 export const EditTaskSchema = z

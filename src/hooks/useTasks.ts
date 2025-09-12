@@ -1,5 +1,6 @@
+import { FilterType } from "@/components/filtersTags";
 import { Tasks } from "@/generated/prisma";
-import { useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { toast } from "sonner";
 
 export function useTasks() {
@@ -7,10 +8,10 @@ export function useTasks() {
   const [loading, setLoading] = useState<boolean>(true);
   const [task, setTask] = useState<string>("");
   const [editTaskValue, setEditTaskValue] = useState<string>("");
-  const [selectedFilter, setSelectedFilter] = useState<string>("all");
+  const [selectedFilter, setSelectedFilter] = useState<FilterType>("all");
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const fetchTasks = async () => {
+  const fetchTasks = useCallback(async () => {
     try {
       setLoading(true);
       const response = await fetch("api/tasks");
@@ -27,7 +28,7 @@ export function useTasks() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   const handleCreateTask = async (
     event: React.MouseEvent<HTMLButtonElement>
@@ -36,6 +37,7 @@ export function useTasks() {
     if (!task.trim()) return;
 
     try {
+      setLoading(true);
       const response = await fetch("api/tasks", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -45,6 +47,7 @@ export function useTasks() {
       if (!response.ok) {
         const errorData = await response.json();
         toast.error(errorData.error || "Erro ao editar tarefa");
+        setLoading(false);
         return;
       }
 
@@ -52,11 +55,13 @@ export function useTasks() {
 
       setTaskList((prev) => [...prev, newTask]);
       setTask("");
+      setLoading(false);
       if (inputRef.current) {
         inputRef.current.value = "";
       }
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Erro desconhecido");
+      setLoading(false);
     }
   };
 
@@ -93,11 +98,30 @@ export function useTasks() {
       });
       const result = await response.json();
       if (!response.ok) {
-        toast.error(result.error || "Erro ao editar tarefa");
+        toast.error(result.error || "Erro ao deletar tarefa");
         return;
       }
       setTaskList((prev) => prev.filter((task) => task.id !== id));
       toast.success(result.message || "Tarefa deletada com sucesso");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Erro desconhecido");
+    }
+  };
+
+  const handleDeleteAllDoneTask = async (id: string[]) => {
+    try {
+      const response = await fetch("api/tasks", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id }),
+      });
+      const result = await response.json();
+      if (!response.ok) {
+        toast.error(result.error || "Erro ao deletar tarefas");
+        return;
+      }
+      setTaskList((prev) => prev.filter((task) => !id.includes(task.id)));
+      toast.success(result.message || "Tarefas deletadas com sucesso");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Erro desconhecido");
     }
@@ -119,5 +143,6 @@ export function useTasks() {
     handleCreateTask,
     handleDeleteTask,
     handleEditTask,
+    handleDeleteAllDoneTask,
   };
 }

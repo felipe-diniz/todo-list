@@ -1,15 +1,15 @@
 "use client";
 
-import Modal from "@/components/modal";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
-import { ListCheck, Plus, Sigma, Trash } from "lucide-react";
+import { ListCheck, LoaderCircle, Plus, Sigma, Trash } from "lucide-react";
 import { useEffect } from "react";
 import TaskItem from "@/components/taskItem";
 import { useTasks } from "@/hooks/useTasks";
 import FilterTags from "@/components/filtersTags";
+import AlertModal from "@/components/alertModal";
 
 const Home = () => {
   const {
@@ -25,19 +25,17 @@ const Home = () => {
     handleCreateTask,
     handleDeleteTask,
     handleEditTask,
+    handleDeleteAllDoneTask,
   } = useTasks();
 
   useEffect(() => {
     fetchTasks();
-  }, []);
-
-  const filtersOption = [
-    { name: "Todas", tag: "all" },
-    { name: "Pendentes", tag: "pending" },
-    { name: "Completas", tag: "done" },
-  ];
+  }, [fetchTasks]);
 
   const totalTasks = taskList.length;
+  const taskDoneDeleted = taskList
+    .filter((task) => task.done === true)
+    .map((task) => task.id);
   const tasksDoneCount = taskList.filter((task) => task.done === true).length;
   const filteredTasks = taskList.filter((task) => {
     if (selectedFilter === "all") return task;
@@ -55,31 +53,28 @@ const Home = () => {
             onChange={(e) => setTask(e.target.value)}
           />
           <Button className="cursor-pointer" onClick={handleCreateTask}>
-            <Plus /> Adicionar
+            {loading === true ? (
+              <LoaderCircle className="animate-spin" />
+            ) : (
+              <Plus />
+            )}{" "}
+            Adicionar
           </Button>
         </CardContent>
 
         <CardContent>
           <Separator className="mb-4" />
 
-          <div className="flex gap-2">
-            {filtersOption.map((f) => {
-              return (
-                <FilterTags
-                  key={f.tag}
-                  id={f.tag}
-                  name={f.name}
-                  selectedFilter={selectedFilter}
-                  setSelectedFilter={() => setSelectedFilter(f.tag)}
-                />
-              );
-            })}
-          </div>
+          <FilterTags
+            setSelectedFilter={setSelectedFilter}
+            selectedFilter={selectedFilter}
+          />
+
           <div className="mt-4">
             {loading === true ? (
-              <div>Loading tasks...</div>
+              <div>Carregando tarefas...</div>
             ) : loading === false && filteredTasks.length === 0 ? (
-              <p>No tasks found</p>
+              <p>Nenhuma tarefa encontrada</p>
             ) : (
               filteredTasks.map((task) => {
                 return (
@@ -103,8 +98,8 @@ const Home = () => {
                 Tarefas Concluídas ({tasksDoneCount}/{totalTasks})
               </p>
             </div>
-            <Modal
-              title="Tem certeza que deseja excluir x itens?"
+            <AlertModal
+              title={`Tem certeza que deseja excluir ${tasksDoneCount} tarefa(s) concluída(s)?`}
               trigger={
                 <Button
                   variant="outline"
@@ -113,18 +108,14 @@ const Home = () => {
                   <Trash /> Limpar tarefas concluídas
                 </Button>
               }
-            >
-              <div className="flex gap-2 justify-end">
-                <Button className="cursor-pointer">Sim</Button>
-                <Button className="cursor-pointer">Não</Button>
-              </div>
-            </Modal>
+              onclick={async () => handleDeleteAllDoneTask(taskDoneDeleted)}
+            ></AlertModal>
           </div>
 
           <div className="h-2 w-full bg-gray-100 mt-4 rounded-md">
             <div
               className="h-full bg-blue-500 rounded-md"
-              style={{ width: "50%" }}
+              style={{ width: `${(tasksDoneCount / totalTasks) * 100}%` }}
             ></div>
           </div>
           <div className="flex gap-2 items-center justify-end text-sm mt-2">

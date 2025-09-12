@@ -29,13 +29,13 @@ const TaskItem = ({
       className="flex h-14 gap-2 items-center justify-between border-t-1 last:border-b-1"
     >
       <div
-        className={`w-1 h-full ${
-          task.done === true ? "bg-green-400" : "bg-red-400"
-        }`}
+        className={`w-1 h-full ${task.done ? "bg-green-400" : "bg-red-400"}`}
       />
       <p
         onClick={async () => handleEditTask(task.id, task.task, !task.done)}
-        className={`flex-1 px-2 text-sm hover:text-gray-300 cursor-pointer`}
+        className={`flex-1 px-2 text-sm hover:text-gray-300 cursor-pointer ${
+          task.done ? "line-through text-gray-400" : ""
+        }`}
       >
         {task.task}
       </p>

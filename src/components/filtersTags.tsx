@@ -1,35 +1,41 @@
 import { BadgeCheckIcon, ClipboardClock, List } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
+export type FilterType = "all" | "pending" | "done";
+
 interface FilterTagsProps {
-  setSelectedFilter: (value: string) => void;
-  selectedFilter: string;
-  id: string;
-  name: string;
+  setSelectedFilter: (value: FilterType) => void;
+  selectedFilter: FilterType;
 }
 
-const FilterTags = ({
-  setSelectedFilter,
-  selectedFilter,
-  id,
-  name,
-}: FilterTagsProps) => {
+const filtersOption: { tag: FilterType; name: string }[] = [
+  { tag: "all", name: "Todas" },
+  { tag: "pending", name: "Pendentes" },
+  { tag: "done", name: "Completas" },
+];
+
+const FilterTags = ({ setSelectedFilter, selectedFilter }: FilterTagsProps) => {
   return (
-    <Badge
-      id={id}
-      onClick={() => setSelectedFilter(id)}
-      variant={selectedFilter === id ? "default" : "outline"}
-      className="cursor-pointer"
-    >
-      {id === "all" ? (
-        <List />
-      ) : id === "pending" ? (
-        <ClipboardClock />
-      ) : (
-        <BadgeCheckIcon />
-      )}
-      {name}
-    </Badge>
+    <div className="flex gap-2">
+      {filtersOption.map((filter) => (
+        <Badge
+          key={filter.tag}
+          id={filter.tag}
+          onClick={() => setSelectedFilter(filter.tag)}
+          variant={selectedFilter === filter.tag ? "default" : "outline"}
+          className="cursor-pointer"
+        >
+          {filter.tag === "all" ? (
+            <List />
+          ) : filter.tag === "pending" ? (
+            <ClipboardClock />
+          ) : (
+            <BadgeCheckIcon />
+          )}
+          {filter.name}
+        </Badge>
+      ))}
+    </div>
   );
 };
 
