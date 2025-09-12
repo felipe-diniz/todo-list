@@ -2,6 +2,7 @@ import { FilterType } from "@/components/filtersTags";
 import { Tasks } from "@/generated/prisma";
 import { useCallback, useRef, useState } from "react";
 import { toast } from "sonner";
+import { set } from "zod";
 
 export function useTasks() {
   const [taskList, setTaskList] = useState<Tasks[]>([]);
@@ -34,7 +35,10 @@ export function useTasks() {
     event: React.MouseEvent<HTMLButtonElement>
   ) => {
     event.preventDefault();
-    if (!task.trim()) return;
+    if (!task.trim()) {
+      toast.error("Tarefa vazia não pode ser criada");
+      return;
+    }
 
     try {
       setLoading(true);
@@ -56,6 +60,7 @@ export function useTasks() {
       setTaskList((prev) => [...prev, newTask]);
       setTask("");
       setLoading(false);
+      toast.success("Tarefa criada com sucesso");
       if (inputRef.current) {
         inputRef.current.value = "";
       }
@@ -82,7 +87,18 @@ export function useTasks() {
         toast.error(errorData.error || "Erro ao editar tarefa");
         return;
       }
-      await fetchTasks();
+      setTaskList((prev) =>
+        prev.map((task) =>
+          task.id === id
+            ? {
+                ...task,
+                task: newTaskValue ?? task.task,
+                done: done ?? task.done,
+              }
+            : task
+        )
+      );
+      toast.success("Tarefa editada com sucesso");
       setEditTaskValue("");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Erro desconhecido");
